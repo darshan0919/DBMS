@@ -1,0 +1,243 @@
+1.	Give names of the forests stated in more than one states but only in one country.
+
+SELECT forest_location.fname FROM forest_location
+GROUP BY forest_location.fname HAVING COUNT(forest_location.province)>1
+EXCEPT
+SELECT t1.fname FROM (SELECT DISTINCT fname,country FROM forest_location) AS t1 GROUP BY t1.fname HAVING count(t1.country)>1;
+
+
+
+2.	Provide details of the officials of the respective forests with Spotted Deer.
+
+SELECT e.fname,officials.name,officials.post,officials.email,officials.contact
+FROM officials
+INNER JOIN forest_location e
+ON officials.forest_id=e.id
+INNER JOIN lives_in
+ ON e.fname=lives_in.forest_name
+WHERE lives_in.animal_name='Spotted Deer';
+
+
+
+
+3.	Details of all Forests which have Tiger reserved National Park but doesn’t have Tiger reserved Sanctuary
+
+SET search_path TO forest_management;
+
+SELECT * FROM
+forest
+INNER JOIN
+(SELECT forest_name FROM national_park 
+NATURAL JOIN lives_in 
+WHERE animal_name='Tiger'
+EXCEPT
+SELECT forest_name FROM sanctuary WHERE animal = 'Tiger') AS r
+ON forest.name = r.forest_name;
+
+
+
+4.	Give average fraction of area affected by forest fire and total area of forest for all causes of forest fire. 
+
+SELECT avg(j.fraction_area), j.cause
+FROM(
+SELECT (f.affected_area_km2/forest.area_km2) fraction_area,f.*
+FROM forest_fire f
+INNER JOIN forest_location l
+ON l.id=f.forest_id
+INNER JOIN forest 
+ON forest.name=l.fname ) j
+GROUP BY cause;
+ 
+ 
+
+5.	Give name and country of tourists stayed in Gujarat.
+	SELECT DISTINCT tourist.name, tourist.country FROM 
+(hotel JOIN ((h_address NATURAL JOIN package) AS t1 NATURAL JOIN selects) AS 
+t2 ON(hotel.id=t2.hotel_id)) AS t3 JOIN tourist ON(tourist.id=t3.tourist_id)
+WHERE t3.province='Gujarat';
+
+
+
+
+6.	Give yearwise forests which have suffered highest loss(affected area/total forest area) in forest fires.
+	SELECT e.year,e.name,e.frac_area
+FROM (
+	SELECT (ff.affected_area_km2/f.area_km2) as frac_area, f.name,ff.year
+FROM forest_fire ff
+INNER JOIN forest_location fl
+ON fl.id=ff.forest_id
+INNER JOIN forest f
+ON f.name=fl.fname
+) e
+INNER JOIN
+(	SELECT max(e.frac_area),e.year
+FROM(	
+SELECT (ff.affected_area_km2/f.area_km2) as frac_area,     f.name,ff.year
+   			FROM forest_fire ff
+INNER JOIN forest_location fl
+ON fl.id=ff.forest_id
+INNER JOIN forest f
+ON f.name=fl.fname
+) e
+GROUP BY e.year
+)g
+ON g.max=e.frac_area
+ORDER BY e.year;
+
+
+
+
+
+7.	Give name and contact number of official with forest name having highest total affected area by fire.
+	
+	SELECT t2.fname, officials.name, officials.contact, t2.fire_area FROM 
+officials JOIN (forest_location JOIN 
+(SELECT forest_fire.forest_id, SUM(forest_fire.affected_area_km2) AS fire_area
+FROM forest_fire GROUP BY forest_id 
+ORDER BY fire_area DESC) AS t1 ON(forest_location.id=t1.forest_id)) AS
+t2 ON(officials.forest_id=t2.id) ORDER BY t2.fire_area DESC LIMIT 1;
+
+
+
+8.	Provide with average vegetation index for all forest and all treatment types along with total area treated in the particular forest with that treatment.
+
+SELECT fl.fname,e.treatment_type,e.average_vegetation_index,e.total_area_treated
+FROM(
+SELECT avg(i.vegetation) average_vegetation_index,sum(r.area) total_area_treated,r.treatment_type,r.forest_id
+FROM regeneration r
+NATURAL JOIN "index" i
+GROUP BY r.treatment_type,r.forest_id
+) e
+INNER JOIN forest_location fl
+ON fl.id=e.forest_id
+ORDER BY fl.fname,e.treatment_type;
+
+
+
+9.	Given a cause of forest fire, list the all the forests with that cause of fire and compare the vegetation index of fire year with the vegetation index with the previous year for all the years.
+
+
+	SET search_path TO forest_management;
+SELECT fname AS forest_name,fire_year,fire_year_vegetation,last_year,last_vegetation FROM
+forest_location
+NATURAL JOIN
+(SELECT curr_veg.forest_id,fire_year,fire_year_vegetation,last_year,last_vegetation FROM
+(SELECT veg_idx.forest_id,veg_idx.year AS fire_year,vegetation AS fire_year_vegetation FROM
+(SELECT year,forest_id,vegetation FROM index) as veg_idx 
+INNER join 
+(SELECT * FROM forest_fire
+where cause = 'Residents') AS fire_year
+ON fire_year.year=veg_idx.year AND fire_year.forest_id = veg_idx.forest_id) AS curr_veg
+
+INNER join
+
+(SELECT veg_idx.forest_id,veg_idx.year AS last_year,vegetation AS last_vegetation FROM
+(SELECT year,forest_id,vegetation FROM index) AS veg_idx 
+INNER JOIN 
+(SELECT * FROM forest_fire
+WHERE cause = 'Residents') AS fire_year
+ON fire_year.year-1=veg_idx.year AND fire_year.forest_id = veg_idx.forest_id) AS last_veg
+
+ON curr_veg.forest_id = last_veg.forest_id AND curr_veg.fire_year-1 = last_veg.last_year) AS data
+
+
+
+
+
+10.	Give yearly,insect wise and for different product type used in pest control, get total defoliated area from all forests and and total treated area. 
+
+SELECT insect.common_name ,e.year ,e.prod_type ,e.total_defoliated_area ,e.total_treated_area
+FROM(
+SELECT ri.scientific_name,ri.year,pc.prod_type,sum(ri.defoliated_area) total_defoliated_area,sum(pc.area_km2) total_treated_area
+FROM forest_location fl
+INNER JOIN "defoliates" ri
+ON ri.forest_id=fl.id
+INNER JOIN pest_control pc
+ON pc.forest_id=fl.id and pc.insect_pest=ri.scientific_name
+GROUP BY ri.year,ri.scientific_name,pc.prod_type
+ORDER BY ri.scientific_name,ri.year,pc.prod_type
+) e
+NATURAL JOIN insect;
+
+
+11.	Give yearly data of number of visitors a forest had and the amount of revenue collected in form of rents and sales. 
+
+SELECT fl.fname,tt.year,tt.total_tourist,rr.amount_rev 
+FROM(
+SELECT tou.year,count(vb.tourist_id) total_tourist,vb.forest_id
+FROM tourist tou
+INNER JOIN visited_by vb
+ON vb.tourist_id=tou.id
+GROUP BY tou.year,vb.forest_id
+) tt
+NATURAL JOIN(
+SELECT sum(re.amount$) amount_rev,re.year,re.forest_id
+FROM revenue re
+WHERE re.category='Rent' or re.category='Sales_and_Rentals'
+GROUP BY re.year,re.forest_id
+) rr 
+INNER JOIN forest_location fl
+ON fl.id=rr.forest_id
+ORDER BY forest_id,year;
+
+
+
+12.	List Forest name, average quantity of hardwood and softwood, year, and Amount of Stumpage charge for those years.
+
+
+	SELECT fname,year,avg_qty_m3,amount$  
+FROM
+forest_location
+INNER JOIN
+	(SELECT * 
+		FROM
+		(SELECT forest_id,year,AVG(quantity_m3) AS avg_qty_m3 FROM wood_supply GROUP BY forest_id,year)AS year_supply
+		NATURAL JOIN
+		(SELECT * FROM revenue 
+		WHERE category='Stumpage Charges') AS year_stump)AS data
+ON forest_location.id = data.forest_id;
+
+13.	List of forests having all the animals which have life expectancy less than 25 years.(Lifespan is of format [10-20]).
+
+	SELECT lives_in.forest_name
+FROM lives_in
+INNER JOIN animal
+ON animal.name=lives_in.animal_name
+GROUP BY lives_in.forest_name
+HAVING max(cast(SUBSTRING(lifespan_years,4,LENGTH(lifespan_years)) as int))<=25
+
+
+
+14.	List names of all Forests having all the animals with conservation status ‘Near Threatened’ in year 2011.
+
+SELECT * FROM lives_in 
+WHERE animal_name not in ( SELECT animal_name FROM (
+(SELECT animal_name , forest_name FROM (select forest_name from
+(
+select forest_name,animal_name from animal_yearwise
+where constatus='Near Threatened' and year=2011) as s
+) as p cross join 
+(select distinct animal_name from lives_in) as sp)
+EXCEPT
+(SELECT animal_name , forest_name FROM lives_in) ) AS r ); 
+
+
+
+
+1. Total number of tigers in Sundarbans.
+2. The country having highest amount of total forest revenues.
+3. Top 5 rare animal species found in India.
+4.  Which forest has the least biodiversity index.
+5.  Biggest 3 sanctuaries in U.S.A.
+6. Where are the sanctuaries for bears around the world.
+7. Top 10 most favourite the animal species (according to number of visitors of the sanctuaries). 
+8. Give contacts of zonal offices of the forests which have vegetation index above 0.5 and is not declared sanctuary yet having rarity =” extinct” in its at least half of the species of animals and most burning history.
+9. Give name of two sanctuaries having same species which are having same rarity level and should it should be transferred from one to second sanctuary to increase poplutation.
+10. Which are the sanctuaries in which every year tigers are increasing per year.
+
+
+
+
+
+
+

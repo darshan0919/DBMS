@@ -1,0 +1,115 @@
+--------------------------------------		1.Forests visited by No of Tourists(SP)	---------------------------------------
+CREATE TYPE holder AS (forest_name varchar(35), total_cnt int);
+CREATE FUNCTION cnt_tourist() RETURNS SETOF holder AS $BODY$	
+DECLARE
+	ans holder%rowtype;
+BEGIN
+	FOR ans IN SELECT t1.name, count(visited_by.tourist_id) from
+	(forest_location join forest on(forest_location.fname=forest.name)) as
+	t1 join visited_by on(t1.id=visited_by.forest_id) GROUP BY t1.name
+	LOOP 
+		RETURN NEXT ans;
+	END LOOP;
+END
+$BODY$ LANGUAGE plpgsql;
+
+
+------------------------- 		2.Animal visited by Number of Tourists(SP)---------------------------
+
+CREATE TYPE ani_holder AS (animal_name varchar(35), total_cnt int);
+CREATE FUNCTION find_popularity() RETURNS SETOF ani_holder AS $BODY$
+DECLARE
+	ans ani_holder%ROWTYPE;
+BEGIN
+	FOR ans IN SELECT t2.animal_name, sum(tt.total_cnt) FROM
+	((forest join lives_in on(forest.name=lives_in.forest_name)) AS
+	t1 join animal on(t1.animal_name=animal.name)) AS
+	t2 join (select * from cnt_tourist()) AS tt on(t2.forest_name=tt.forest_name)
+	GROUP BY t2.animal_name ORDER BY sum(tt.total_cnt) DESC
+	LOOP
+		RETURN NEXT ans;
+	END LOOP;
+END $BODY$ LANGUAGE plpgsql;
+
+
+----------------------------------- 		3.Overall_Yearwise_Status of animal(SP)----------------------------------
+
+CREATE TYPE holder1 AS (animal_name varchar(35), year int,constatus varchar(25));
+CREATE TYPE holder2 AS (animal_name varchar(35), year int,total bigint); 
+CREATE FUNCTION overall_status() RETURNS SETOF holder1 AS $BODY$	
+DECLARE
+	ans holder1%rowtype;
+	i holder2%rowtype;
+	cur decimal;
+   	pre decimal;
+	r decimal;
+BEGIN
+		
+	FOR i IN SELECT t1.animal_name,t1.year, sum(t1.no_males + t1.no_females) as total from
+			animal_yearwise as t1 GROUP BY t1.animal_name,t1.year
+	LOOP 
+		cur = i.total;
+  		pre = X.total from X 
+				where (year=i.year - 1 and animal_name=i.animal_name);
+		r = cur/pre;
+		ans.animal_name=i.animal_name;
+		ans.year=i.year;
+  		if(r<=0) then 
+			ans.constatus = 'Extinct';
+  		elseif(r<=0.001) then
+			ans.constatus = 'Extinct in Wild';
+		elseif (r<=0.05) then
+			ans.constatus = 'Critically Endangered';
+		elseif (r<=0.2) then
+			ans.constatus = 'Endangered';
+		elseif (r<=0.5) then
+			ans.constatus = 'Vulnerable';
+		elseif (r<=0.85) then
+			ans.constatus = 'Near Threatened';
+		else
+			ans.constatus = 'Least Concern';
+  		end if;
+		RETURN NEXT ans;
+	END LOOP;
+END
+$BODY$ LANGUAGE plpgsql;
+
+
+-----------------------------		1.Conservation_Status_Animal_Yearwise(TR)		--------------------------------------
+
+
+CREATE FUNCTION tr() RETURNS TRIGGER AS $BODY$
+DECLARE
+	cur decimal;
+   	pre decimal;
+	r decimal;
+Begin
+  		cur = new.no_males + new.no_females;
+  		pre =  animal_yearwise.no_males+animal_yearwise.no_females from animal_yearwise 
+				where (year=new.year - 1 and animal_name=new.animal_name and forest_name=new.forest_name);
+		r = cur/pre;
+  		if(r<=0) then 
+			new.constatus = 'Extinct';
+  		elseif(r<=0.001) then
+			new.constatus = 'Extinct in Wild';
+		elseif (r<=0.05) then
+			new.constatus = 'Critically Endangered';
+		elseif (r<=0.2) then
+			new.constatus = 'Endangered';
+		elseif (r<=0.5) then
+			new.constatus = 'Vulnerable';
+		elseif (r<=0.85) then
+			new.constatus = 'Near Threatened';
+		else
+			new.constatus = 'Least Concern';
+  		end if;
+  		return new;
+end $BODY$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trig
+  before insert or update
+  ON animal_yearwise
+  FOR EACH ROW
+  EXECUTE PROCEDURE tr();
+
+

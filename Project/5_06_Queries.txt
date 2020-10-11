@@ -1,0 +1,17 @@
+  1). Give names of the forests stated in more than one states but only in one country.
+  2). Provide details of the officials of the respective forests with Spotted Deer.
+  3). Details of all Forests which have Tiger reserved National Park but doesn’t have Tiger reserved Sanctuary.
+  4). Give average fraction of area affected by forest fire and total area of forest for all causes of forest fire.
+  5). Give name and country of tourists stayed in user entered state.
+  6). Give yearwise forests which have suffered highest loss(affected area/total forest area) in forest fires.
+  7). Give name and contact number of official with forest name having highest total affected area by fire.
+  8). Provide with average vegetation index for all forest and all treatment types along with total area treated in the particular forest with that treatment.
+  9). Given a cause of forest fire, list the all the forests with that cause of fire and compare the vegetation index of fire year with the vegetation index with the previous year for all the years.
+  10). Give yearly,insect wise and for different product type used in pest control, get total defoliated area from all forests and and total treated area.
+  11). Give yearly data of number of visitors a forest had and the amount of revenue collected in form of rents and sales.
+  12). List Forest name, average quantity of hardwood and softwood, year, and Amount of Stumpage charge for those years.
+  13). List of forests having all the animals which have life expectancy less than 25 years. (Lifespan is of format [10-20]).
+  14). List names of all Forests having all the animals with conservation status ‘Near Threatened’ in year 2011.
+  15). Give name of forests with count of tourists visited that forest.
+  16). Give popularity of animals by visitors those visited that animal.
+  

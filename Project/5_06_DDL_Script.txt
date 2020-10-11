@@ -1,0 +1,232 @@
+/*CREATING Schema*/
+CREATE SCHEMA Forest_Management;
+/*Going into Schema*/
+SET SEARCH_PATH TO Forest_Management;
+/*Creating Tables*/
+
+
+CREATE TABLE Forest(
+	name varchar(35) PRIMARY KEY,
+	website text,
+	category varchar(35),
+	no_of_species int,
+	area_km2 decimal(10,3)
+);
+
+CREATE TABLE Forest_Location(
+	fname varchar(35) REFERENCES Forest(name) 
+ON DELETE CASCADE
+ON UPDATE CASCADE,
+	province varchar(35),
+country varchar(35),
+id varchar(15) primary key
+);
+
+CREATE TABLE Animal(
+	name varchar(35)  PRIMARY KEY,
+	scientific_name varchar(35) NOT NULL,
+	lifespan_years varchar(10),
+	category varchar(35)
+);
+
+CREATE TABLE Lives_In(
+	forest_name varchar(35) REFERENCES Forest(name)
+ON DELETE CASCADE
+ON UPDATE CASCADE,
+	animal_name varchar(35) REFERENCES Animal(name)
+ON DELETE CASCADE
+ON UPDATE CASCADE,
+	PRIMARY KEY(forest_name, animal_name)
+);
+
+CREATE TABLE Animal_Yearwise(
+	animal_name varchar(35),
+forest_name varchar(35),
+	year int,
+	no_males int NOT NULL,
+	no_females int NOT NULL,
+	death_rate decimal(4,2),
+	constatus varchar(20),
+Foreign key (animal_name,forest_name) references Lives_In(animal_name,forest_name)
+ON DELETE CASCADE
+ON UPDATE CASCADE,
+	PRIMARY KEY(animal_name, forest_name,year)
+);
+
+CREATE TABLE Index(
+	Forest_id varchar(35) REFERENCES Forest_Location(id)
+ON DELETE CASCADE
+ON UPDATE CASCADE,
+	year int,
+	deforestation decimal(4,2),
+	biodiversity decimal(4,2),
+	vegetation decimal(4,2),
+	PRIMARY KEY(Forest_id,year) 
+);
+
+CREATE TABLE Insect (
+	scientific_name varchar(35) PRIMARY KEY,
+	common_name varchar(35) NOT NULL
+);
+
+
+CREATE TABLE Defoliates(
+	forest_id varchar(15) REFERENCES Forest_Location(id)
+ON DELETE CASCADE
+ON UPDATE CASCADE,
+year int,
+	scientific_name varchar(35) REFERENCES Insect(scientific_name)
+ON DELETE CASCADE
+ON UPDATE CASCADE,
+	defoliated_area decimal(10,3) NOT NULL,
+	PRIMARY KEY (scientific_name, forest_id,year)
+);
+
+CREATE TABLE Pest_Control(
+forest_id varchar(35) ,
+year int,	
+prod_type varchar(75),
+	insect_pest varchar(35),
+	method varchar(75),
+	area_km2 decimal(10,3) NOT NULL,
+Foreign key (forest_id,insect_pest,year) REFERENCES Defoliates(forest_id,scientific_name,year)
+ON DELETE CASCADE
+ON UPDATE CASCADE,
+	PRIMARY KEY(forest_id, year, method, prod_type, insect_pest) 
+);
+
+CREATE TABLE Forest_Fire(
+forest_id varchar(35) REFERENCES Forest_Location(id)
+ON DELETE CASCADE
+ON UPDATE CASCADE,
+	year int,	
+	cause varchar(50),
+	protected_zone varchar(35),
+	response_category varchar(35),
+affected_area_km2 decimal(10,3),
+	PRIMARY KEY(forest_id, year, cause, protected_zone, response_category) 
+);
+
+
+CREATE TABLE National_Park(
+	forest_name varchar(35) REFERENCES Forest(name) 
+ON DELETE CASCADE
+ON UPDATE CASCADE,
+	area decimal(10,3),
+since int,
+PRIMARY KEY(forest_name)
+);
+
+
+CREATE TABLE NP_flora(
+	forest_name varchar(35) REFERENCES National_Park(forest_name)
+ON DELETE CASCADE
+ON UPDATE CASCADE,
+	flora varchar(35),
+	PRIMARY KEY(forest_name,flora) 
+); 
+
+CREATE TABLE NP_river(
+	forest_name varchar(35) REFERENCES National_Park(forest_name) ON DELETE CASCADE ON UPDATE CASCADE,
+	river varchar(35),
+	PRIMARY KEY(forest_name,river) 
+); 
+
+CREATE TABLE Sanctuary (
+	forest_name varchar(15) REFERENCES Forest(name) ON DELETE CASCADE ON UPDATE CASCADE,
+	animal varchar(35) REFERENCES Animal(name) ON DELETE CASCADE ON UPDATE CASCADE,
+	since int,
+	area decimal(10,3),
+	PRIMARY KEY(forest_name)
+);
+
+
+CREATE TABLE Regeneration(
+	forest_id varchar(15) REFERENCES Forest_Location(id) ON DELETE CASCADE ON UPDATE CASCADE,
+	year int,
+	treatment_type varchar(55),
+tenure varchar(35),
+area decimal(10,3) NOT NULL,
+	PRIMARY KEY(forest_id, year, treatment_type,tenure) 
+);
+
+CREATE TABLE Revenue (
+	forest_id varchar(15) REFERENCES Forest_Location(id) ON DELETE CASCADE ON UPDATE CASCADE,
+	year int,
+	category varchar(35),
+	amount_$ bigint NOT NULL,
+	PRIMARY KEY(forest_id, year, category) 
+);
+
+CREATE TABLE Wood_Supply (
+	forest_id varchar(15) REFERENCES Forest_Location(id) ON DELETE CASCADE ON UPDATE CASCADE,
+	year int,
+	species_group varchar(35),
+	tenure varchar(35),
+	quantity_m3 decimal(12,3) NOT NULL,
+	PRIMARY KEY (forest_id,year, tenure, species_group)
+);
+
+CREATE TABLE Officials(
+	id varchar(15) PRIMARY KEY,
+	name varchar(35),
+forest_id varchar(15) REFERENCES Forest_Location(id) ON DELETE CASCADE ON UPDATE CASCADE,
+	post varchar(35),
+	email varchar(35),
+	contact varchar(35)
+);
+
+CREATE TABLE Tourist(
+	id int PRIMARY KEY,
+	name varchar(35) NOT NULL,
+	country varchar(35) NOT NULL,	
+year int NOT NULL
+);
+
+CREATE TABLE Visited_By(
+	tourist_id int REFERENCES Tourist(id) ON DELETE CASCADE ON UPDATE CASCADE,
+	forest_id varchar(35) REFERENCES Forest_Location(id) ON DELETE CASCADE ON UPDATE CASCADE,
+	PRIMARY KEY(tourist_id , forest_id));
+
+CREATE TABLE Hotel(
+	id int PRIMARY KEY, 
+	hname varchar(50) NOT NULL,
+	manager varchar(35) NOT NULL,
+	contact varchar(35),
+	capacity int,
+	price_$ decimal(10,3)
+);
+
+CREATE TABLE H_Address(
+	hotel_id int REFERENCES Hotel(id) ON DELETE CASCADE ON UPDATE CASCADE,
+	landmark varchar(35),
+	road varchar(35),
+	province varchar(35),
+	country varchar(35),
+	PRIMARY KEY(hotel_id)
+);
+
+CREATE TABLE Transportation(
+	category varchar(35)  PRIMARY KEY,
+	price_$ decimal(10,3)
+);
+
+CREATE TABLE Package(
+	category varchar(35) REFERENCES Transportation(category) ON DELETE CASCADE ON UPDATE CASCADE,
+	hotel_id int REFERENCES Hotel(id) ON DELETE CASCADE ON UPDATE CASCADE,
+	no_days int NOT NULL,
+	price_$ decimal(12,3) NOT NULL,
+	PRIMARY KEY(category, hotel_id,no_days,price_$)
+);
+
+CREATE TABLE Selects(
+	tourist_id int REFERENCES Tourist(id) ON DELETE CASCADE ON UPDATE CASCADE,
+	category varchar(35) NOT NULL,
+hotel_id int NOT NULL,
+no_days int NOT NULL,
+	price_$ decimal(12,3) NOT NULL,
+	FOREIGN KEY (hotel_id,category,no_days,price_$) REFERENCES package(hotel_id,category,no_days,price_$) ON DELETE CASCADE ON UPDATE CASCADE,
+	PRIMARY KEY(tourist_id, hotel_id, category,no_days,price_$)
+);
+
+
